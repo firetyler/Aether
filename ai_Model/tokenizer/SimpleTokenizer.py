@@ -9,7 +9,8 @@ import json
 import re
 import unicodedata
 from collections import Counter
-from logToken import get_logger
+from ai_Model.utils.logToken import get_logger
+#from logToken import get_logger
 sys.stdout.reconfigure(encoding='utf-8')  # Forces UTF-8 output
 logger = get_logger("SimpleTokenizer")
 class SimpleTokenizer:

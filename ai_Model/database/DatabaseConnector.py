@@ -2,7 +2,8 @@ import json
 import psycopg2
 import os
 from jproperties import Properties
-from loggerDatabace import get_logger
+from ai_Model.utils.loggerDatabace import get_logger
+#from loggerDatabace import get_logger
 
 logger = get_logger("DatabaseConnector")
 

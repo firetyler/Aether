@@ -1,6 +1,7 @@
 import multiprocessing
-from aether2 import AetherAgent
-from DatabaseConnector import DatabaseConnector
+from ai_Model.aether2 import AetherAgent
+#from aether2 import AetherAgent
+from ai_Model.database.DatabaseConnector import DatabaseConnector
 
 # ✅ Shared database connection
 db_connector = DatabaseConnector()

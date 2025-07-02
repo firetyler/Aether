@@ -4,10 +4,14 @@ import os
 import json
 import torch
 import torch.nn as nn
-from SimpleTokenizer import StackedTransformer, SimpleTokenizer, AdvancedSentenceTransformer
-from chatDataset import ChatDataset
-from logTrainer import get_logger
-from mask_utils import generate_square_subsequent_mask
+from ai_Model.tokenizer.SimpleTokenizer import StackedTransformer, SimpleTokenizer, AdvancedSentenceTransformer
+#from SimpleTokenizer import StackedTransformer, SimpleTokenizer, AdvancedSentenceTransformer
+from ai_Model.chat_dataset import ChatDataset
+#from chatDataset import ChatDataset
+from ai_Model.utils.logTrainer import get_logger
+#from logTrainer import get_logger
+from ai_Model.utils.mask_utils import generate_square_subsequent_mask
+#from mask_utils import generate_square_subsequent_mask
 from torch.utils.data import DataLoader
 
 sys.stdout.reconfigure(encoding='utf-8')

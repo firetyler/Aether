@@ -7822,3 +7822,9 @@
 2025-05-31 14:25:30,606 | INFO | aether2 | Model loaded successfully from aether_model.pth.
 2025-05-31 14:26:07,127 | INFO | aether2 | GOAL: what´s is the capital of sweden ?
 2025-05-31 14:26:07,146 | INFO | aether2 | Tokenized input: [1, 156, 157, 50, 77, 158, 159, 98, 2]
+2025-07-02 20:08:25,486 | INFO | aether2 | Vocab loaded with size: 300
+2025-07-02 20:08:25,488 | INFO | aether2 | Token embedding initialized with vocab size: 300
+2025-07-02 20:08:25,734 | INFO | aether2 | Model loaded successfully from aether_model.pth.
+2025-07-02 21:00:14,850 | INFO | aether2 | Vocab loaded with size: 300
+2025-07-02 21:00:14,850 | INFO | aether2 | Token embedding initialized with vocab size: 300
+2025-07-02 21:00:14,940 | INFO | aether2 | Model loaded successfully from aether_model.pth.

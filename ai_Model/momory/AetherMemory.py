@@ -3,8 +3,10 @@ import numpy as np
 import torch
 import wikipedia
 import re
-from AetherMemoryLog import get_logger
-from SimpleTokenizer import StackedTransformer
+from ai_Model.utils.AetherMemoryLog import get_logger
+from ai_Model.tokenizer.SimpleTokenizer import StackedTransformer
+#from AetherMemoryLog import get_logger
+#from SimpleTokenizer import StackedTransformer
 logger = get_logger("AetherMemory")
 
 class AetherMemory:

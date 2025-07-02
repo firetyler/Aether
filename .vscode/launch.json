@@ -1,49 +1,45 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        
-      {
-        "type": "java",
-        "request": "launch",
-        "name": "BackendApplication",
-        "mainClass": "com.example.backend.BackendApplication",
-        "projectName": "backend"
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "BackendApplication",
+      "mainClass": "com.example.backend.BackendApplication",
+      "projectName": "backend"
+    },
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "FlaskApp",
+      "module": "ai_Model.flask.EndPoints",
+      "console": "integratedTerminal",
+      "env": {
+        "FLASK_APP": "ai_Model/flask/EndPoints.py",
+        "FLASK_ENV": "development"
       },
-      {
-        "type": "debugpy",
-        "request": "launch",
-        "name": "FlaskApp",
-        "program": "${workspaceFolder}/ai_Model/EndPoints.py",
-        "console": "integratedTerminal",
-        "env": {
-          "FLASK_APP": "ai_Model/EndPoints.py",
-          "FLASK_ENV": "development"
-        },
-        "justMyCode": true
-      },
-      {
+      "justMyCode": true
+    },
+    {
       "type": "node",
       "request": "launch",
       "name": "Angular Frontend",
       "runtimeExecutable": "npm",
       "cwd": "${workspaceFolder}/../frontend",
-       "runtimeArgs": [
-        
-    
-    "start"
-  ],
+      "runtimeArgs": [
+        "start"
+      ],
       "console": "integratedTerminal"
     }
-    ],
-    "compounds": [
-      {
-        "name": "Start Java + Flask + Angular Frontend",
-        "configurations": [
-          "BackendApplication",
-          "FlaskApp",
-          "Angular Frontend"
-        ]
-      }
-    ]
-  }
-  
+  ],
+  "compounds": [
+    {
+      "name": "Start Java + Flask + Angular Frontend",
+      "configurations": [
+        "BackendApplication",
+        "FlaskApp",
+        "Angular Frontend"
+      ]
+    }
+  ]
+}

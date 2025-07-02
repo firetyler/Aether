@@ -1,8 +1,9 @@
 import json
-from EndPointLog import get_logger
+from ai_Model.utils.EndPointLog import get_logger
+
 from flask import Flask, request, jsonify
-from aether2 import AetherAgent
-from DatabaseConnector import DatabaseConnector
+from ai_Model.aether2  import AetherAgent
+from ai_Model.database.DatabaseConnector import DatabaseConnector
 
 # ✅ Initialize logger correctly
 logger = get_logger("EndPoints")
