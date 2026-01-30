@@ -7842,3 +7842,11 @@
 2025-07-02 21:22:43,637 | INFO | aether2 | Vocab loaded with size: 300
 2025-07-02 21:22:43,637 | INFO | aether2 | Token embedding initialized with vocab size: 300
 2025-07-02 21:22:43,790 | INFO | aether2 | Model loaded successfully from aether_model.pth.
+2026-01-31 00:28:15,079 | INFO | aether2 | Vocab loaded with size: 300
+2026-01-31 00:28:15,080 | INFO | aether2 | Token embedding initialized with vocab size: 300
+2026-01-31 00:28:15,384 | INFO | aether2 | Model loaded successfully from aether_model.pth.
+2026-01-31 00:38:57,049 | INFO | aether2 | Vocab loaded with size: 300
+2026-01-31 00:38:57,050 | INFO | aether2 | Token embedding initialized with vocab size: 300
+2026-01-31 00:38:57,302 | INFO | aether2 | Model loaded successfully from aether_model.pth.
+2026-01-31 00:40:18,651 | INFO | aether2 | GOAL: hej
+2026-01-31 00:40:18,654 | INFO | aether2 | Tokenized input: [1, 43, 2]
