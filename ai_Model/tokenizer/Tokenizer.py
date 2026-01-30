@@ -2,7 +2,7 @@
 import os
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers
 
-class BpeTokenizer:
+class BpeTokenizer():
     def __init__(self, vocab_file="bpe_tokenizer.json"):
         self.vocab_file = vocab_file
         if os.path.exists(vocab_file):

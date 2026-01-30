@@ -6,6 +6,8 @@ import torch.nn as nn
 import math
 import re
 from torch.utils.data import Dataset,DataLoader
+from ai_Model.tokenizer.Tokenizer import BpeTokenizer
+#from ai_Model.tokenizer import BpeTokenizer
 from ai_Model.tokenizer.SimpleTokenizer import AdvancedSentenceTransformer, StackedTransformer, SimpleTokenizer
 from ai_Model.momory.AetherMemory import AetherMemory
 #from SimpleTokenizer import AdvancedSentenceTransformer, StackedTransformer, SimpleTokenizer
@@ -42,6 +44,7 @@ class AetherAgent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.db_connector = db_connector
         self.name = "Aether"
+        #self.tokenizer = BpeTokenizer()
         self.tokenizer = SimpleTokenizer()
         self.model = None
         self.code_executor = CodeExecutor()
