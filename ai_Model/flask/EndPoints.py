@@ -4,6 +4,7 @@ from ai_Model.utils.EndPointLog import get_logger
 from flask import Flask, request, jsonify
 from ai_Model.aether2  import AetherAgent
 from ai_Model.database.DatabaseConnector import DatabaseConnector
+from ai_Model.training.Traning.train_model import Trainer
 
 # ✅ Initialize logger correctly
 logger = get_logger("EndPoints")
@@ -29,7 +30,6 @@ except Exception as e:
     agent.train_model(config_path="ai_Model/config.json")
     agent.save_model(filename=config["model_path"])
     logger.info("New model trained and saved.")
-
 # ✅ Function to clean AI responses
 def clean_response(raw_output):
     """Fix nested JSON encoding issues and ensure valid structure."""

@@ -1,38 +1,41 @@
 # trainer.py
-import sys
 import os
 import json
 import torch
 import torch.nn as nn
-from ai_Model.tokenizer.SimpleTokenizer import StackedTransformer, SimpleTokenizer, AdvancedSentenceTransformer
-#from SimpleTokenizer import StackedTransformer, SimpleTokenizer, AdvancedSentenceTransformer
-from ai_Model.chat_dataset import ChatDataset
-#from chatDataset import ChatDataset
-from ai_Model.utils.logTrainer import get_logger
-#from logTrainer import get_logger
-from ai_Model.utils.mask_utils import generate_square_subsequent_mask
-#from mask_utils import generate_square_subsequent_mask
 from torch.utils.data import DataLoader
+from ai_Model.chat_dataset.chatDataset import ChatDataset
+from ai_Model.utils.mask_utils import generate_square_subsequent_mask
+from ai_Model.tokenizer.SimpleTokenizer import StackedTransformer
+from ai_Model.utils.logger_setup import get_logger
 
-sys.stdout.reconfigure(encoding='utf-8')
-logger = get_logger("training")
+logger = get_logger("trainer")
+
 
 class Trainer:
-    def __init__(self, tokenizer=None, device=None, embed_size=256):
-        self.tokenizer = tokenizer or SimpleTokenizer()
+    def __init__(self, model, tokenizer, device=None, embed_size=256, tokenizer_path="bpe_tokenizer.json"):
+        self.model = model
+        self.tokenizer = tokenizer
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.embed_size = embed_size
-        self.model = None
+        self.tokenizer_path = tokenizer_path
 
     def load_config(self, path):
         try:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"Could not read the config file: {e}")
+            logger.error(f"Could not load config: {e}")
             return {}
 
-    def save_checkpoint(self, epoch, optimizer, filename):
+    def collate_fn(self, batch):
+        inputs, targets = zip(*batch)
+        max_len = max(max(len(seq) for seq in inputs), max(len(seq) for seq in targets))
+        def pad(seqs):
+            return torch.stack([torch.cat([seq, torch.zeros(max_len - len(seq), dtype=torch.long)]) for seq in seqs])
+        return pad(inputs), pad(targets)
+
+    def save_checkpoint(self, epoch, optimizer, filename="checkpoint_latest.pth"):
         checkpoint = {
             "epoch": epoch,
             "model_state_dict": self.model.state_dict(),
@@ -41,55 +44,20 @@ class Trainer:
         }
         torch.save(checkpoint, filename)
 
-    def load_checkpoint(self, filename, optimizer, config):
-        if not os.path.isfile(filename):
-            logger.warning(f"No checkpoint file found: {filename}")
-            return 0
-
+    def load_checkpoint(self, filename, optimizer):
         checkpoint = torch.load(filename, map_location=self.device)
-
-        self.tokenizer.load_vocab(config.get("tokenizer_vocab_path", "tokenizer_vocab.json"))
-        vocab_size = self.tokenizer.vocab_size
-
-        self.model = StackedTransformer(
-            vocab_size=vocab_size,
-            embed_size=self.embed_size,
-            num_layers=config.get("num_layers", 6),
-            num_heads=config.get("heads", 8),
-            forward_expansion=config.get("forward_expansion", 4),
-            dropout=config.get("dropout", 0.1),
-            pooling=config.get("pooling", "cls")
-        ).to(self.device)
-
-        model_dict = self.model.state_dict()
-        pretrained_dict = {k: v for k, v in checkpoint["model_state_dict"].items() if k in model_dict}
-        model_dict.update(pretrained_dict)
-        self.model.load_state_dict(model_dict)
-
-        if "optimizer_state_dict" in checkpoint:
-            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         return checkpoint.get("epoch", 0) + 1
 
-    def collate_fn(self, batch):
-        inputs, targets = zip(*batch)
-        max_len = max(max(len(seq) for seq in inputs), max(len(seq) for seq in targets))
-
-        def pad(seqs):
-            return torch.stack([
-                torch.cat([seq, torch.zeros(max_len - len(seq), dtype=torch.long)])
-                for seq in seqs
-            ])
-
-        return pad(inputs), pad(targets)
-
-    def train_model(self, config_path="ai_Model/config.json"):
+    def train(self, config_path="ai_Model/config.json"):
         config = self.load_config(config_path)
+        batch_size = config.get("batch_size", 32)
         epochs = config.get("epochs", 10)
         lr = config.get("learning_rate", 0.001)
-        batch_size = config.get("batch_size", 32)
         data_paths = config.get("train_data_paths", [])
 
+        # 🔹 Läs träningsdata
         training_data = []
         for path in data_paths:
             if not os.path.exists(path):
@@ -102,51 +70,62 @@ class Trainer:
                 training_data.extend(pairs)
 
         if not training_data:
-            logger.error("No training data found.")
+            logger.error("No training data found. Aborting training.")
             return
 
+        # 🔹 Bygg vokabulär
         texts = [x for pair in training_data for x in pair]
-        self.tokenizer.build_vocab(texts)
-        self.tokenizer.save_vocab("tokenizer_vocab.json")
+        self.tokenizer.train(texts)
+        self.tokenizer.save_vocab(self.tokenizer_path)
+        vocab_size = len(self.tokenizer.word2idx)
+        logger.info(f"Tokenizer trained/updated. Vocab size: {vocab_size}")
 
+        # 🔹 Dataset och DataLoader
         dataset = ChatDataset(training_data, self.tokenizer)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=self.collate_fn)
 
-        vocab_size = len(self.tokenizer.word2idx)
-        self.model = StackedTransformer(
-            vocab_size=vocab_size,
-            embed_size=config.get("embedding_dim", 256),
-            num_layers=config.get("num_layers", 6),
-            num_heads=config.get("heads", 8),
-            forward_expansion=config.get("forward_expansion", 4),
-            dropout=config.get("dropout", 0.1),
-            pooling=config.get("pooling", "cls")
-        ).to(self.device)
-
+        # 🔹 Optimizer och loss
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss(ignore_index=0)
 
+        # 🔹 Checkpoint
         checkpoint_path = "checkpoint_latest.pth"
-        start_epoch = self.load_checkpoint(checkpoint_path, optimizer, config) if os.path.exists(checkpoint_path) else 0
+        start_epoch = 0
+        if os.path.exists(checkpoint_path):
+            start_epoch = self.load_checkpoint(checkpoint_path, optimizer)
+            logger.info(f"Resuming training from epoch {start_epoch}")
+
+        # 🔹 Träningsloop med early stopping
+        best_loss = float("inf")
+        patience_counter = 0
+        early_stopping_patience = config.get("early_stopping_patience", 3)
 
         for epoch in range(start_epoch, epochs):
             self.model.train()
             total_loss = 0
             for x, y in dataloader:
                 x, y = x.to(self.device), y.to(self.device)
-
                 optimizer.zero_grad()
-                out = self.model(x)
-
+                mask = generate_square_subsequent_mask(x.size(1)).to(self.device)
+                out = self.model(x, mask)
                 loss = criterion(out.view(-1, out.size(-1)), y.view(-1))
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
 
             avg_loss = total_loss / len(dataloader)
-            logger.info(f"Epoch {epoch + 1}/{epochs} - Loss: {avg_loss:.4f}")
-            self.save_checkpoint(epoch + 1, optimizer, checkpoint_path)
+            logger.info(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
+            self.save_checkpoint(epoch+1, optimizer, checkpoint_path)
+
+            if avg_loss < best_loss:
+                best_loss = avg_loss
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= early_stopping_patience:
+                    logger.info(f"No improvement for {early_stopping_patience} epochs. Early stopping at epoch {epoch+1}.")
+                    break
 
         self.model.eval()
         torch.save(self.model.state_dict(), config.get("model_path", "aether_model.pth"))
-        logger.info("Training complete and model saved.")
+        logger.info("Training complete. Model saved successfully.")

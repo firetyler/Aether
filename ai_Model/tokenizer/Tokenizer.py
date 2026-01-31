@@ -3,6 +3,10 @@ import os
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers
 
 class BpeTokenizer():
+    @property
+    def vocab_size(self):
+        return len(self.word2idx)
+    
     def __init__(self, vocab_file="bpe_tokenizer.json"):
         self.vocab_file = vocab_file
         if os.path.exists(vocab_file):

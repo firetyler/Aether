@@ -222,3 +222,6 @@
 2025-05-31 14:26:07,268 | INFO | AetherMemory | Memory added: 'what´s is the capital of sweden ?...'
 2025-07-02 21:04:00,688 | INFO | AetherMemory | Memory added: 'whats your name ?...'
 2026-01-31 00:40:18,756 | INFO | AetherMemory | Memory added: 'hej...'
+2026-01-31 01:18:53,442 | ERROR | AetherMemory | embed_model saknar `token_embedding`! Kontrollera att modellen är korrekt instansierad.
+2026-01-31 01:20:25,831 | ERROR | AetherMemory | embed_model saknar `token_embedding`! Kontrollera att modellen är korrekt instansierad.
+2026-01-31 01:22:44,154 | ERROR | AetherMemory | embed_model saknar `token_embedding`! Kontrollera att modellen är korrekt instansierad.

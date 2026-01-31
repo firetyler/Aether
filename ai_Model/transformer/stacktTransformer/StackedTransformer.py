@@ -40,8 +40,10 @@ class AdvancedStackedTransformer(nn.Module):
     def __init__(self, vocab_size, embed_size=512, num_layers=8, heads=8, forward_expansion=4, dropout=0.1):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.positional_encoding = PositionalEncoding(embed_size, dropout)
+        self.token_embedding = self.embedding  # 🔹 Fix: För AetherMemory
+        self.embed_size = embed_size
 
+        self.positional_encoding = PositionalEncoding(embed_size, dropout)
         self.layers = nn.ModuleList(
             [TransformerBlock(embed_size, heads, dropout, forward_expansion) for _ in range(num_layers)]
         )
@@ -49,7 +51,7 @@ class AdvancedStackedTransformer(nn.Module):
         self.fc_out = nn.Linear(embed_size, vocab_size)
 
     def forward(self, x, mask=None):
-        x = self.embedding(x)
+        x = self.token_embedding(x)  # 🔹 Använd token_embedding
         x = self.positional_encoding(x)
         for layer in self.layers:
             x = layer(x, x, x, mask)
