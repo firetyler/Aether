@@ -59,13 +59,13 @@ The AI service runs independently and communicates with the Java backend over HT
   mvn clean install
 
   
-2.** onfigure your application.properties in java and AI model
+2.** Configure your application.properties in java and AI model
 spring.datasource.url=jdbc:postgresql://localhost:5432/aether_db
 spring.datasource.username=postgres
 spring.datasource.password=your_password
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-Set youserName and password for Enpoint 
+Set youserName and password for Endpoint 
 
 3. **Run the Java backend:
    mvn spring-boot:run
