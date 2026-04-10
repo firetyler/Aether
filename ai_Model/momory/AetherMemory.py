@@ -30,13 +30,24 @@ class AetherMemory:
     # =====================
     def add(self, text):
         vector = self.text_to_vector(text)
+
         if vector is None:
-            logger.warning(f"Memory skipped: '{text[:50]}...'")
             return
 
-        self.memories.append(text)
+        vector = np.array(vector).astype("float32")
+
+        # 🔥 FORCE SHAPE ALWAYS (1, d)
+        vector = vector.reshape(1, -1)
+
+        # 🔥 ensure consistency
+        if self.index.d != vector.shape[1]:
+            logger.warning("FAISS index rebuilt due to dimension mismatch")
+            self.index = faiss.IndexFlatL2(vector.shape[1])
+            self.memories = []  #  IMPORTANT FIX
+
         self.index.add(vector)
-        logger.info(f"Memory added: '{text[:50]}...'")
+        self.memories.append(text)
+        
 
     # =====================
     # Konvertera text -> vektor
@@ -70,26 +81,35 @@ class AetherMemory:
                 embeddings = embeddings[0]  # Ta första elementet om output är tuple
             # Ta genomsnitt över sekvensdimensionen
             vector = embeddings.mean(dim=1).cpu().numpy().astype(np.float32)
-
+        vector = vector.squeeze()
+        vector = np.array(vector).astype(np.float32)
         return vector
 
     # =====================
     # Semantisk sökning
     # =====================
     def semantic_search(self, query, top_k=3):
-        if not self.memories:
+        if not self.memories or self.index.ntotal == 0:
             return []
 
         query_vector = self.text_to_vector(query)
         if query_vector is None:
             return []
 
+        query_vector = np.array(query_vector).astype("float32")
+
+        # 🔥 FORCE SHAPE
+        query_vector = query_vector.reshape(1, -1)
+
         distances, indices = self.index.search(query_vector, top_k)
-        results = [
-            (self.memories[idx], float(distances[0][i]))
-            for i, idx in enumerate(indices[0])
-            if idx < len(self.memories)
-        ]
+
+        results = []
+        for i, idx in enumerate(indices[0]):
+            if 0 <= idx < len(self.memories):
+                results.append(
+                    (self.memories[idx], float(distances[0][i]))
+                )
+
         return results
 
     # =====================

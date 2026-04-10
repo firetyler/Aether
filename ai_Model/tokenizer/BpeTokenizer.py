@@ -2,31 +2,42 @@
 import os
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers
 
-class BpeTokenizer():
-    @property
-    def vocab_size(self):
-        return len(self.word2idx)
-    
+
+class BpeTokenizer:
     def __init__(self, vocab_file="bpe_tokenizer.json"):
         self.vocab_file = vocab_file
+
         if os.path.exists(vocab_file):
-            self.load_vocab(vocab_file)
+            self.tokenizer = Tokenizer.from_file(vocab_file)
         else:
             self.tokenizer = None
+
+    @property
+    def vocab_size(self):
+        if self.tokenizer is None:
+            return 16000
+        return len(self.tokenizer.get_vocab())
 
     def train(self, texts, vocab_size=16000):
         self.tokenizer = Tokenizer(models.BPE(unk_token="<UNK>"))
         self.tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel()
-        trainer = trainers.BpeTrainer(vocab_size=vocab_size, special_tokens=["<PAD>", "<UNK>", "<BOS>", "<EOS>"])
 
-        # Spara texter till temporär fil och träna
-        with open("_tmp_bpe_data.txt", "w", encoding="utf-8") as f:
+        trainer = trainers.BpeTrainer(
+            vocab_size=vocab_size,
+            special_tokens=["<PAD>", "<UNK>", "<BOS>", "<EOS>"]
+        )
+
+        tmp_file = "_tmp_bpe_data.txt"
+
+        with open(tmp_file, "w", encoding="utf-8") as f:
             for line in texts:
                 f.write(line + "\n")
 
-        self.tokenizer.train(["_tmp_bpe_data.txt"], trainer)
-        os.remove("_tmp_bpe_data.txt")
-        self.save_vocab(self.vocab_file)
+        # ✅ FIX: korrekt HuggingFace API
+        self.tokenizer.train(files=[tmp_file], trainer=trainer)
+
+        os.remove(tmp_file)
+        self.save_vocab()
 
     def encode(self, text):
         return self.tokenizer.encode(text).ids
@@ -42,4 +53,4 @@ class BpeTokenizer():
 
     @property
     def word2idx(self):
-        return self.tokenizer.get_vocab()
+        return self.tokenizer.get_vocab() if self.tokenizer else {}

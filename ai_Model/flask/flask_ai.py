@@ -1,14 +1,18 @@
 import json
 import os
 import sys
+os.environ["PYTHONIOENCODING"] = "utf-8"
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 from flask import Flask, request, jsonify
 
 # Lägg till projektets root (en nivå upp) i sökvägar för imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from DatabaseConnector import DatabaseConnector
+from ai_Model.database.DatabaseConnector import DatabaseConnector
 from aether2 import AetherAgent
-from EndPointLog import get_logger
+from ai_Model.utils.EndPointLog import get_logger
+
 
 logger = get_logger("Endpoints")
 app = Flask(__name__)

@@ -3,14 +3,14 @@ import json
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from ai_Model.tokenizer.Tokenizer import BpeTokenizer
+from ai_Model.tokenizer.BpeTokenizer import BpeTokenizer
 from ai_Model.tokenizer.SimpleTokenizer import StackedTransformer
 from ai_Model.utils.mask_utils import generate_square_subsequent_mask
 from ai_Model.momory.AetherMemory import AetherMemory
 from ai_Model.database.DatabaseConnector import DatabaseConnector
 from ai_Model.codeEx.code_executor import CodeExecutor
 from ai_Model.utils.logger_setup import get_logger
-from ai_Model.training.Traning.train_model import Trainer 
+from ai_Model.training.Trainer import Trainer 
 
 logger = get_logger("aether2")
 

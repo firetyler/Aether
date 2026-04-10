@@ -1,102 +1,146 @@
 import json
-from ai_Model.utils.EndPointLog import get_logger
+import os
+import sys
+
+os.environ["PYTHONIOENCODING"] = "utf-8"
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 from flask import Flask, request, jsonify
-from ai_Model.aether2  import AetherAgent
-from ai_Model.database.DatabaseConnector import DatabaseConnector
-from ai_Model.training.Traning.train_model import Trainer
 
-# ✅ Initialize logger correctly
+from ai_Model.utils.EndPointLog import get_logger
+from ai_Model.aether2 import AetherAgent
+from ai_Model.database.DatabaseConnector import DatabaseConnector
+
+# =====================
+# LOGGER
+# =====================
 logger = get_logger("EndPoints")
 
-# ✅ Create Flask app
+# =====================
+# APP
+# =====================
 app = Flask(__name__)
 
-# ✅ Initialize database connector BEFORE usage
+# =====================
+# DB + AGENT
+# =====================
 db_connector = DatabaseConnector()
-
-# ✅ Create AI agent
 agent = AetherAgent(db_connector)
 
-# ✅ Load configuration
 config = agent.load_config("ai_Model/config.json")
 
-# ✅ Ensure model is trained before running
+# =====================
+# LOAD / TRAIN MODEL SAFELY
+# =====================
 try:
     agent.load_model()
     logger.info("Model loaded successfully.")
 except Exception as e:
-    logger.warning(f"Model not found – training new model... ({e})")
+    logger.warning(f"Model not found – training new model... {e}")
+
+    # ❌ FIX: använd agent, inte import av train_model
     agent.train_model(config_path="ai_Model/config.json")
     agent.save_model(filename=config["model_path"])
+
     logger.info("New model trained and saved.")
-# ✅ Function to clean AI responses
+
+# =====================
+# CLEAN RESPONSE
+# =====================
 def clean_response(raw_output):
-    """Fix nested JSON encoding issues and ensure valid structure."""
     if not raw_output or not isinstance(raw_output, str):
-        logger.error("Invalid raw_output received in clean_response")
         return "{}"
 
     try:
-        parsed = json.loads(raw_output)  # Decode first level
-        return parsed.get("response", parsed)  # Extract actual response if available
-    except json.JSONDecodeError:
-        logger.warning("JSON decoding failed, returning raw output")
-        return raw_output  # ✅ Return safely instead of crashing
+        parsed = json.loads(raw_output)
+        return parsed.get("response", parsed)
+    except Exception:
+        return raw_output
 
 
-# ✅ Route for text generation
+# =====================
+# GENERATE ROUTE
+# =====================
 @app.route("/generate", methods=["POST"])
 def generate():
     try:
-        data = request.get_json()
-        logger.info(f"Received request: {data}")  # 🔹 Log input data for debugging
+        data = request.get_json(force=True, silent=True) or {}
+        logger.info(f"Received request: {data}")
 
         user_input = data.get("prompt", "").strip()
         if not user_input:
-            logger.error("No prompt provided or empty input!")
             return jsonify({"error": "Invalid input"}), 400
 
-        agent_response = agent.run(user_input)
-        if not agent_response or not isinstance(agent_response, str):
-            logger.error(f"Invalid agent response: {agent_response}")
-            return jsonify({"error": "Agent failed to generate a valid response"}), 500
+        logger.info("Calling agent.run...")
+
+        try:
+            agent_response = agent.run(user_input)
+            logger.info(f"RAW RESPONSE: {agent_response}")
+
+        except AssertionError:
+            logger.exception("FAISS dimension mismatch")
+            return jsonify({
+                "error": "Memory mismatch (FAISS)",
+                "fix": "Reset memory / reinitialize embeddings"
+            }), 500
+
+        except Exception as e:
+            logger.exception("agent.run crashed")
+            return jsonify({"error": str(e)}), 500
+
+        if not agent_response:
+            return jsonify({"error": "Empty response"}), 500
+
+        if not isinstance(agent_response, str):
+            agent_response = str(agent_response)
 
         cleaned_response = clean_response(agent_response)
-        db_connector.insert_conversation("User", user_input, cleaned_response)
+        logger.info(f"CLEANED RESPONSE: {cleaned_response}")
+
+        try:
+            db_connector.insert_conversation("User", user_input, cleaned_response)
+        except Exception:
+            logger.exception("DB insert failed (ignored)")
 
         return jsonify({"response": cleaned_response}), 200
 
-    except Exception as e:
-        logger.error(f"Error occurred in /generate: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        logger.exception("FULL ERROR in /generate")
+        return jsonify({"error": "internal crash"}), 500
 
 
-# ✅ Route for answering questions
+# =====================
+# ASK ROUTE
+# =====================
 @app.route("/ask", methods=["POST"])
 def ask():
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         user_input = data.get("prompt", "").strip()
 
         if not user_input:
             return jsonify({"error": "No prompt provided"}), 400
 
-        logger.info(f"❔ Question received: {user_input}")
-        agent_response = agent.run(user_input)
+        logger.info(f"Question: {user_input}")
 
-        if not agent_response:
-            return jsonify({"error": "Agent failed to generate a response"}), 500
+        response = agent.run(user_input)
 
-        db_connector.insert_conversation("User", user_input, agent_response)
-        return jsonify({"input": user_input, "output": agent_response}), 200
+        db_connector.insert_conversation("User", user_input, response)
+
+        return jsonify({
+            "input": user_input,
+            "output": response
+        }), 200
 
     except Exception as e:
-        logger.error(f"Error occurred: {e}")
+        logger.exception("ASK route error")
         return jsonify({"error": str(e)}), 500
 
 
-# ✅ Run Flask app
+# =====================
+# RUN SERVER
+# =====================
 if __name__ == "__main__":
     logger.info("Starting Flask server...")
     app.run(port=5000, debug=False)
