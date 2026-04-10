@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from ai_Model.tokenizer.BpeTokenizer import BpeTokenizer
-from ai_Model.tokenizer.SimpleTokenizer import StackedTransformer
+from ai_Model.transformer.stacktTransformer import StackedTransformer
 from ai_Model.utils.mask_utils import generate_square_subsequent_mask
 from ai_Model.momory.AetherMemory import AetherMemory
 from ai_Model.database.DatabaseConnector import DatabaseConnector
