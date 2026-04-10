@@ -7958,3 +7958,17 @@
 2026-04-10 22:13:17,728 | INFO | aether2 | Model initialized with vocab size: 537
 2026-04-10 22:18:20,941 | INFO | aether2 | Loaded BPE tokenizer from bpe_tokenizer.json, vocab size: 537
 2026-04-10 22:18:20,974 | INFO | aether2 | Model initialized with vocab size: 537
+2026-04-10 22:27:41,398 | INFO | aether2 | Loaded BPE tokenizer from bpe_tokenizer.json, vocab size: 537
+2026-04-10 22:30:40,677 | INFO | aether2 | Loaded BPE tokenizer from bpe_tokenizer.json, vocab size: 537
+2026-04-10 22:39:57,548 | INFO | aether2 | Loaded BPE tokenizer from bpe_tokenizer.json, vocab size: 537
+2026-04-10 22:39:57,585 | INFO | aether2 | Model initialized with vocab size: 537
+2026-04-10 22:42:17,956 | INFO | aether2 | Loaded BPE tokenizer from bpe_tokenizer.json, vocab size: 537
+2026-04-10 22:42:17,997 | INFO | aether2 | Model initialized with vocab size: 537
+2026-04-10 22:42:25,341 | INFO | trainer | Tokenizer trained. Vocab size: 537
+2026-04-10 22:44:52,827 | INFO | trainer | Tokenizer trained. Vocab size: 537
+2026-04-10 22:47:07,653 | INFO | trainer | Tokenizer trained. Vocab size: 537
+2026-04-10 22:50:44,826 | INFO | trainer | Tokenizer trained. Vocab size: 537
+2026-04-10 22:52:23,466 | INFO | aether2 | Loaded BPE tokenizer from bpe_tokenizer.json, vocab size: 537
+2026-04-10 22:52:23,495 | INFO | aether2 | Model initialized with vocab size: 537
+2026-04-10 22:52:30,405 | INFO | trainer | Tokenizer trained. Vocab size: 537
+2026-04-10 22:54:35,013 | INFO | trainer | Tokenizer trained. Vocab size: 537

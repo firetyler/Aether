@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from ai_Model.tokenizer.BpeTokenizer import BpeTokenizer
-from ai_Model.transformer.stacktTransformer import StackedTransformer
+from ai_Model.transformer.stacktTransformer.stacked_transformer import AdvancedStackedTransformer
 from ai_Model.utils.mask_utils import generate_square_subsequent_mask
 from ai_Model.momory.AetherMemory import AetherMemory
 from ai_Model.database.DatabaseConnector import DatabaseConnector
@@ -82,7 +82,7 @@ class AetherAgent:
     def _init_model(self):
         vocab_size = len(self.tokenizer.word2idx)
         self.token_embedding = nn.Embedding(vocab_size, self.embed_size, padding_idx=0)
-        self.model = StackedTransformer(
+        self.model = AdvancedStackedTransformer(
             embed_size=self.embed_size,
             vocab_size=vocab_size,
             num_layers=4,

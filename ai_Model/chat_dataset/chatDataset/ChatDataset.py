@@ -1,9 +1,9 @@
 import torch
-from torch.utils.data import DataLoader,Dataset
+from torch.utils.data import Dataset
 
 class ChatDataset(Dataset):
     def __init__(self, data, tokenizer, max_len=128):
-        self.data = data  # list of (input_text, output_text) tuples
+        self.data = data
         self.tokenizer = tokenizer
         self.max_len = max_len
 
@@ -11,10 +11,15 @@ class ChatDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        input_text, output_text = self.data[idx]
-        
-        # Tokenisera input och output och konvertera till tensorer
-        input_tokens = torch.tensor(self.tokenizer.encode(input_text), dtype=torch.long)
-        output_tokens = torch.tensor(self.tokenizer.encode(output_text), dtype=torch.long)
-        
-        return input_tokens, output_tokens
+        inp, out = self.data[idx]
+
+        input_tokens = self.tokenizer.encode(inp)
+        output_tokens = self.tokenizer.encode(out)
+
+        input_tokens = input_tokens[:self.max_len]
+        output_tokens = output_tokens[:self.max_len]
+
+        return (
+            torch.tensor(input_tokens, dtype=torch.long),
+            torch.tensor(output_tokens, dtype=torch.long)
+        )
