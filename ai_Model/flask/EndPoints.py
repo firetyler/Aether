@@ -39,8 +39,8 @@ try:
 except Exception as e:
     logger.warning(f"Model not found – training new model... {e}")
 
-    # ❌ FIX: använd agent, inte import av train_model
-    agent.train_model(config_path="ai_Model/config.json")
+    # Kör träning. Ändra resume_from om du vill fortsätta från checkpoint
+    agent.train_model(config_path="ai_Model/config.json", resume_from=None)
     agent.save_model(filename=config["model_path"])
 
     logger.info("New model trained and saved.")
@@ -49,9 +49,9 @@ except Exception as e:
 # CLEAN RESPONSE
 # =====================
 def clean_response(raw_output):
+    """Parse JSON response"""
     if not raw_output or not isinstance(raw_output, str):
         return "{}"
-
     try:
         parsed = json.loads(raw_output)
         return parsed.get("response", parsed)
@@ -60,82 +60,100 @@ def clean_response(raw_output):
 
 
 # =====================
-# GENERATE ROUTE
+# GENERATE ROUTE - Med sampling-metoder
 # =====================
 @app.route("/generate", methods=["POST"])
 def generate():
+    """Generera text med optional sampling-metoder. Stöder både enkla och avancerade requests."""
     try:
         data = request.get_json(force=True, silent=True) or {}
-        logger.info(f"Received request: {data}")
+        logger.info(f"Generate request: {data}")
 
         user_input = data.get("prompt", "").strip()
         if not user_input:
             return jsonify({"error": "Invalid input"}), 400
 
-        logger.info("Calling agent.run...")
+        # Hämta optional sampling-parametrar
+        method = data.get("method", "top_k")
+        temperature = float(data.get("temperature", 0.7))
+        k = int(data.get("k", 10))
+        p = float(data.get("p", 0.9))
+        max_length = int(data.get("max_length", 50))
+
+        logger.info(f"Generating with method={method}, temperature={temperature}")
 
         try:
-            agent_response = agent.run(user_input)
-            logger.info(f"RAW RESPONSE: {agent_response}")
-
-        except AssertionError:
-            logger.exception("FAISS dimension mismatch")
-            return jsonify({
-                "error": "Memory mismatch (FAISS)",
-                "fix": "Reset memory / reinitialize embeddings"
-            }), 500
+            if method == "beam":
+                response = agent.generate_text_beam(user_input, beam_width=int(data.get("beam_width", 3)), max_length=max_length)
+            else:
+                response = agent.generate_text(user_input, method=method, temperature=temperature, k=k, p=p, max_length=max_length)
+            
+            logger.info(f"Generated: {response}")
 
         except Exception as e:
-            logger.exception("agent.run crashed")
+            logger.exception("Generation failed")
             return jsonify({"error": str(e)}), 500
 
-        if not agent_response:
+        if not response:
             return jsonify({"error": "Empty response"}), 500
-
-        if not isinstance(agent_response, str):
-            agent_response = str(agent_response)
-
-        cleaned_response = clean_response(agent_response)
-        logger.info(f"CLEANED RESPONSE: {cleaned_response}")
-
-        try:
-            db_connector.insert_conversation("User", user_input, cleaned_response)
-        except Exception:
-            logger.exception("DB insert failed (ignored)")
-
-        return jsonify({"response": cleaned_response}), 200
-
-    except Exception:
-        logger.exception("FULL ERROR in /generate")
-        return jsonify({"error": "internal crash"}), 500
-
-
-# =====================
-# ASK ROUTE
-# =====================
-@app.route("/ask", methods=["POST"])
-def ask():
-    try:
-        data = request.get_json() or {}
-        user_input = data.get("prompt", "").strip()
-
-        if not user_input:
-            return jsonify({"error": "No prompt provided"}), 400
-
-        logger.info(f"Question: {user_input}")
-
-        response = agent.run(user_input)
 
         db_connector.insert_conversation("User", user_input, response)
 
         return jsonify({
-            "input": user_input,
-            "output": response
+            "prompt": user_input,
+            "response": response,
+            "method": method,
+            "temperature": temperature
         }), 200
 
     except Exception as e:
-        logger.exception("ASK route error")
+        logger.exception("Request processing failed")
         return jsonify({"error": str(e)}), 500
+
+
+# =====================
+# TRAIN / RESUME ROUTE
+# =====================
+@app.route("/train", methods=["POST"])
+def train():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        resume_from = data.get("resume_from")
+        
+        logger.info(f"Training request. Resume from: {resume_from}")
+        
+        agent.train_model(config_path="ai_Model/config.json", resume_from=resume_from)
+        agent.save_model(filename=config["model_path"])
+        
+        return jsonify({
+            "status": "Training complete",
+            "model_path": config["model_path"]
+        }), 200
+    
+    except Exception as e:
+        logger.exception("Training failed")
+        return jsonify({"error": str(e)}), 500
+
+
+# =====================
+# HEALTH CHECK ROUTE
+# =====================
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "healthy",
+        "model_loaded": agent.model is not None,
+        "device": str(agent.device)
+    }), 200
+
+
+# =====================
+# CHAT ROUTE - Alias för /generate (kompatibilitet)
+# =====================
+@app.route("/chat", methods=["POST"])
+def chat():
+    """Alias för /generate route"""
+    return generate()
 
 
 # =====================

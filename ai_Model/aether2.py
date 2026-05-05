@@ -1,16 +1,13 @@
 import os
 import json
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
 from ai_Model.tokenizer.BpeTokenizer import BpeTokenizer
 from ai_Model.transformer.stacktTransformer.stacked_transformer import AdvancedStackedTransformer
-from ai_Model.utils.mask_utils import generate_square_subsequent_mask
 from ai_Model.momory.AetherMemory import AetherMemory
 from ai_Model.database.DatabaseConnector import DatabaseConnector
-from ai_Model.codeEx.code_executor import CodeExecutor
 from ai_Model.utils.logger_setup import get_logger
-from ai_Model.training.Trainer import Trainer 
+from ai_Model.training.Trainer import Trainer
+from ai_Model.inference.inference import generate_text, beam_search_generate 
 
 logger = get_logger("aether2")
 
@@ -22,16 +19,14 @@ class AetherAgent:
         self.embed_size = 256
         self.tokenizer_path = tokenizer_path
         self.config_path = config_path
-        self.code_executor = CodeExecutor()
-       
+        
         self.model = None
-        self.token_embedding = None
         self.memory = None
 
-        # 🔹 Initiera tokenizer
+        # Initiera tokenizer
         self._init_tokenizer()
 
-        # 🔹 Initiera modell och embedding
+        # Initiera modell
         self._init_model()
 
         self.trainer = Trainer(model=self.model, tokenizer=self.tokenizer, device=self.device)
@@ -53,7 +48,8 @@ class AetherAgent:
             logger.info(f"Tokenizer trained and saved to {self.tokenizer_path}")
 
     def _train_tokenizer_from_training_data(self):
-        config = self.load_config(self.config_path)
+        """Träna tokenizer från träningsdata"""
+        config = self.trainer.load_config(self.config_path)
         data_paths = config.get("train_data_paths", [])
         training_texts = []
 
@@ -81,7 +77,6 @@ class AetherAgent:
     # =====================
     def _init_model(self):
         vocab_size = len(self.tokenizer.word2idx)
-        self.token_embedding = nn.Embedding(vocab_size, self.embed_size, padding_idx=0)
         self.model = AdvancedStackedTransformer(
             embed_size=self.embed_size,
             vocab_size=vocab_size,
@@ -94,71 +89,57 @@ class AetherAgent:
         logger.info(f"Model initialized with vocab size: {vocab_size}")
 
     # =====================
-    # Konfigurationsläsning
+    # Checkpoint-hantering (i Trainer.py) - ta bort dubbletter här
     # =====================
-    def load_config(self, path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Could not load config: {e}")
-            return {}
 
     # =====================
-    # Checkpoint-hantering
+    # Collate fn för DataLoader (i Trainer.py) - ta bort dubblett här
     # =====================
-    def save_checkpoint(self, epoch, optimizer, filename):
-        checkpoint = {
-            "epoch": epoch,
-            "model_state_dict": self.model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "tokenizer": self.tokenizer.word2idx
-        }
-        torch.save(checkpoint, filename)
-
-    def load_checkpoint(self, filename, optimizer):
-        checkpoint = torch.load(filename, map_location=self.device)
-        self.model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        return checkpoint.get("epoch", 0) + 1
-
-    # =====================
-    # Collate fn för DataLoader
-    # =====================
-    def collate_fn(self, batch):
-        inputs, targets = zip(*batch)
-        max_len = max(max(len(seq) for seq in inputs), max(len(seq) for seq in targets))
-        def pad(seqs):
-            return torch.stack([torch.cat([seq, torch.zeros(max_len - len(seq), dtype=torch.long)]) for seq in seqs])
-        return pad(inputs), pad(targets)
 
     # =====================
     # Enkel textgenerering
     # =====================
-    def generate_text(self, prompt):
-        tokens = self.tokenizer.encode(prompt)
-        input_ids = torch.tensor([tokens], dtype=torch.long).to(self.device)
-        mask = generate_square_subsequent_mask(input_ids.size(1)).to(self.device)
-        with torch.no_grad():
-            out = self.model(input_ids, mask)
-        return self.tokenizer.decode(out.argmax(dim=-1).squeeze().tolist())
+    def generate_text(self, prompt, method="top_k", temperature=0.7, k=10, p=0.9, max_length=50):
+        """Generera text med olika sampling-metoder.
+        
+        Args:
+            prompt: Starttext
+            method: "top_k" (default), "nucleus", "beam", eller "greedy"
+            temperature: Kreativitet (högre = mer varierat)
+            k: Antal top-k tokens
+            p: Nucleus sampling parameter
+            max_length: Max genererad längd
+        """
+        return generate_text(
+            self.model, self.tokenizer, prompt,
+            max_length=max_length,
+            method=method,
+            temperature=temperature,
+            k=k, p=p
+        )
+
+    def generate_text_beam(self, prompt, beam_width=3, max_length=50):
+        """Generera text med beam search"""
+        return beam_search_generate(self.model, self.tokenizer, prompt, max_length, beam_width)
     
-    def train_model(self, config_path="ai_Model/config.json"):
-        """Kör träning via Trainer."""
-        self.trainer.train(config_path=config_path)
+    def train_model(self, config_path="ai_Model/config.json", resume_from=None):
+        """Kör träning via Trainer. Kan fortsätta från checkpoint om resume_from är specificerad."""
+        self.trainer.train(config_path=config_path, resume_from=resume_from)
 
     def load_model(self, filename="aether_model.pth"):
+        """Ladda modell för inference via Trainer"""
         if os.path.exists(filename):
-            self.model.load_state_dict(torch.load(filename, map_location=self.device))
-            self.model.to(self.device)
-            print(f"Model loaded from {filename}")
+            success = self.trainer.load_model_for_inference(filename)
+            if success:
+                logger.info(f"Model loaded from {filename}")
         else:
-            print(f"Model file '{filename}' not found. You need to train a new model first.")
+            logger.error(f"Model file '{filename}' not found.")
 
     def save_model(self, filename=None):
-        """Spara modell till fil via Trainer."""
+        """Spara modell"""
         filename = filename or "aether_model.pth"
         torch.save(self.model.state_dict(), filename)
+        logger.info(f"Model saved to {filename}")
     # =====================
     # Kör agenten
     # =====================
@@ -171,55 +152,43 @@ class AetherAgent:
 # Main
 # =====================
 if __name__ == "__main__":
-    # 🔹 Initiera databas och agent
+    # Initiera databas och agent
     db = DatabaseConnector()
     agent = AetherAgent(db)
 
-    # 🔹 Skapa Trainer-instans kopplad till agentens modell och tokenizer
-    agent.trainer = Trainer(
-        model=agent.model,
-        tokenizer=agent.tokenizer,
-        device=agent.device,
-        embed_size=agent.embed_size,
-        tokenizer_path=agent.tokenizer_path
-    )
-
-    # 🔹 Försök ladda modell, annars träna ny modell
+    # Försök ladda modell, annars träna ny modell
     model_file = "aether_model.pth"
     try:
         agent.load_model(filename=model_file)
-        print(f"Loaded existing model from {model_file}")
+        logger.info(f"Loaded existing model from {model_file}")
     except FileNotFoundError:
-        print(f"Model file '{model_file}' not found. Training new model...")
+        logger.warning(f"Model file '{model_file}' not found. Training new model...")
         agent.trainer.train(config_path=agent.config_path)
         agent.save_model(filename=model_file)
-        print(f"Training complete. Model saved to {model_file}")
 
-    # 🔹 Kör agenten interaktivt
-    print("\nAether ready! Type 'exit' to quit.")
-    print("Type 'train model' to retrain or continue training the model.\n")
+    logger.info("Aether ready!")
 
     while True:
         try:
             user_input = input("> ")
 
             if user_input.lower() in ["exit", "quit"]:
-                print("Exiting Aether...")
+                logger.info("Exiting Aether...")
                 break
 
             elif user_input.lower() == "train model":
-                print("Training model... This may take a while.")
+                logger.info("Training model...")
                 agent.trainer.train(config_path=agent.config_path)
                 agent.save_model(filename=model_file)
-                print("Training complete!")
+                logger.info("Training complete!")
                 continue
 
-            # 🔹 Kör agenten för vanlig konversation
+            # Kör agenten
             response = agent.run(user_input)
-            print(f"Aether: {response}")
+            logger.info(f"Response: {response}")
 
         except KeyboardInterrupt:
-            print("\nInterrupted by user. Exiting...")
+            logger.info("Interrupted by user.")
             break
         except Exception as e:
-            print(f"Error: {e}")
+            logger.exception(f"Error: {e}")

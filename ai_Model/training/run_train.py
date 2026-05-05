@@ -26,4 +26,8 @@ trainer = Trainer(
     device=device
 )
 
+# Alternativ 1: Ny träning
 trainer.train(config_path="ai_Model/config.json")
+
+# Alternativ 2: Fortsätt från checkpoint
+# trainer.train(config_path="ai_Model/config.json", resume_from="checkpoints/checkpoint_epoch_5.pth")
