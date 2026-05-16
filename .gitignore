@@ -42,3 +42,24 @@ ai_Model/*.pth
 
 aether_chat_trained.pth
 *.log
+logs/
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Editor directories
+.vscode/
+
+# Ignore the literal 'blout' as requested
+blout
