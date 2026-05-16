@@ -1,7 +1,11 @@
 import json
 import subprocess
 import os
-#TODO fix logger if needed
+from ai_Model.utils.logger_common import get_logger
+
+logger = get_logger("CodeExecutor")
+
+
 class CodeExecutor:
     def __init__(self, config_path=None):
         if config_path is None:
@@ -16,6 +20,7 @@ class CodeExecutor:
 
         with open(config_path, "r") as f:
             self.config = json.load(f)
+        logger.info(f"CodeExecutor initialized with config: {config_path}")
 
 
     def run_code(self, code: str, language: str) -> str:
@@ -44,11 +49,14 @@ class CodeExecutor:
             run_proc = subprocess.run(run_cmd, capture_output=True, text=True, timeout=10)
 
             if run_proc.returncode == 0:
+                logger.info("Code executed successfully")
                 return run_proc.stdout
             else:
+                logger.error(f"Runtime error: {run_proc.stderr}")
                 return f"Fel vid körning:\n{run_proc.stderr}"
 
         except Exception as e:
+            logger.exception(f"Exception running code: {e}")
             return f"Undantag vid körning av koden: {e}"
         finally:
             # Ta bort temporär fil (valfritt)

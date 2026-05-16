@@ -1,5 +1,8 @@
 import torch
 import torch.nn as nn
+from ai_Model.utils.logger_common import get_logger
+
+logger = get_logger("stacked_transformer")
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=5000):
@@ -49,6 +52,7 @@ class AdvancedStackedTransformer(nn.Module):
         )
         self.norm = nn.LayerNorm(embed_size)
         self.fc_out = nn.Linear(embed_size, vocab_size)
+        logger.info(f"AdvancedStackedTransformer initialized: vocab_size={vocab_size}, embed_size={embed_size}, layers={len(self.layers)}")
 
     def forward(self, x, mask=None):
         x = self.token_embedding(x)  # 🔹 Använd token_embedding

@@ -5,7 +5,7 @@ from ai_Model.tokenizer.BpeTokenizer import BpeTokenizer
 from ai_Model.transformer.stacktTransformer.stacked_transformer import AdvancedStackedTransformer
 from ai_Model.momory.AetherMemory import AetherMemory
 from ai_Model.database.DatabaseConnector import DatabaseConnector
-from ai_Model.utils.logger_setup import get_logger
+from ai_Model.utils.logger_common import get_logger
 from ai_Model.training.Trainer import Trainer
 from ai_Model.inference.inference import generate_text, beam_search_generate 
 
@@ -49,7 +49,12 @@ class AetherAgent:
 
     def _train_tokenizer_from_training_data(self):
         """Träna tokenizer från träningsdata"""
-        config = self.trainer.load_config(self.config_path)
+        # Avoid using self.trainer here because Trainer may not be initialized yet
+        try:
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
         data_paths = config.get("train_data_paths", [])
         training_texts = []
 
@@ -140,6 +145,21 @@ class AetherAgent:
         filename = filename or "aether_model.pth"
         torch.save(self.model.state_dict(), filename)
         logger.info(f"Model saved to {filename}")
+    
+    def load_config(self, path):
+        """Load a JSON config file. Prefer trainer.load_config if available."""
+        try:
+            if hasattr(self, "trainer") and self.trainer is not None:
+                return self.trainer.load_config(path)
+        except Exception:
+            pass
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Unable to load config {path}: {e}")
+            return {}
     # =====================
     # Kör agenten
     # =====================

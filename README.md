@@ -41,17 +41,37 @@ The AI service runs independently and communicates with the Java backend over HT
 
 ### Python Setup (Aether AI)
 
-1. **Clone the repository:**
-   cd backend-ai-project
-   
-2. **Create a virtual environment:
-  python -m venv .venv
-3. ** Activate the virtual environment:
-  .venv\Scripts\activate
-4. ** Install the Python dependencies:
-  pip install -r requirements.txt
-5. ** Run the AI module
-  python aether.py
+1. From the repository root run the setup script to create a virtual environment and install Python dependencies.
+
+- Windows (PowerShell):
+
+```powershell
+cd path\to\Aether
+scripts\setup_env.ps1
+```
+
+- Unix / macOS:
+
+```bash
+cd path/to/Aether
+./scripts/setup_env.sh
+```
+
+2. Activate the venv and run the AI service:
+
+PowerShell:
+
+```powershell
+. .\.venv\Scripts\Activate.ps1
+python -m ai_Model.aether2
+```
+
+Unix / macOS:
+
+```bash
+source .venv/bin/activate
+python -m ai_Model.aether2
+```
 ### Java Setup
   git clone https://github.com/yourusername/aether-backend.git
   cd aether-backend

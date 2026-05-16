@@ -1,6 +1,9 @@
 
 import os
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers
+from ai_Model.utils.logger_common import get_logger
+
+logger = get_logger("BpeTokenizer")
 
 
 class BpeTokenizer:
@@ -38,18 +41,26 @@ class BpeTokenizer:
 
         os.remove(tmp_file)
         self.save_vocab()
+        logger.info(f"Trained BPE tokenizer, vocab_size={vocab_size}")
 
     def encode(self, text):
-        return self.tokenizer.encode(text).ids
+        try:
+            ids = self.tokenizer.encode(text).ids
+            return ids
+        except Exception as e:
+            logger.exception(f"Encode failed for text: {e}")
+            return []
 
     def decode(self, ids):
         return self.tokenizer.decode(ids)
 
     def save_vocab(self, path=None):
         self.tokenizer.save(path or self.vocab_file)
+        logger.info(f"Saved tokenizer vocab to {path or self.vocab_file}")
 
     def load_vocab(self, path=None):
         self.tokenizer = Tokenizer.from_file(path or self.vocab_file)
+        logger.info(f"Loaded tokenizer vocab from {path or self.vocab_file}")
 
     @property
     def word2idx(self):

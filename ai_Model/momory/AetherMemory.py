@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import wikipedia
 import re
-from ai_Model.utils.AetherMemoryLog import get_logger
+from ai_Model.utils.logger_common import get_logger
 
 logger = get_logger("AetherMemory")
 
